@@ -3,177 +3,248 @@
 import { useState } from "react"
 
 function BookingForm({ venue, onContinueToPayment, onBackToVenue }) {
-  const [formData, setFormData] = useState({
+  const [bookingData, setBookingData] = useState({
     date: "",
     time: "",
     duration: 1,
     court: "Court 1",
+    playerName: "",
+    playerEmail: "",
+    playerPhone: "",
   })
 
   const timeSlots = [
-    "06:00",
-    "07:00",
-    "08:00",
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-    "17:00",
-    "18:00",
-    "19:00",
-    "20:00",
-    "21:00",
-    "22:00",
+    "6:00 AM",
+    "7:00 AM",
+    "8:00 AM",
+    "9:00 AM",
+    "10:00 AM",
+    "11:00 AM",
+    "12:00 PM",
+    "1:00 PM",
+    "2:00 PM",
+    "3:00 PM",
+    "4:00 PM",
+    "5:00 PM",
+    "6:00 PM",
+    "7:00 PM",
+    "8:00 PM",
+    "9:00 PM",
   ]
 
   const courts = ["Court 1", "Court 2", "Court 3", "Court 4"]
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+    setBookingData({
+      ...bookingData,
+      [e.target.name]: e.target.value,
+    })
+  }
+
+  const calculateTotal = () => {
+    const basePrice = Number.parseInt(venue.price.replace(/[^0-9]/g, ""))
+    return basePrice * bookingData.duration
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    const total = venue.price * formData.duration
+    const total = calculateTotal()
     onContinueToPayment({
-      ...formData,
+      ...bookingData,
       venue,
       total,
     })
   }
 
-  const getTomorrowDate = () => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return tomorrow.toISOString().split("T")[0]
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <button onClick={onBackToVenue} className="flex items-center text-gray-600 hover:text-gray-900">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Venue
+      {/* Navigation Header */}
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-white rounded-full"></div>
+              </div>
+              <span className="text-xl font-semibold text-gray-800">QuickCourt</span>
+            </div>
+            <button onClick={onBackToVenue} className="text-gray-700 hover:text-teal-600 font-medium">
+              ← Back to Venue
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Court Booking</h1>
-            <div></div>
           </div>
         </div>
-      </div>
+      </nav>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          {/* Venue Info */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">{venue.name}</h2>
-            <p className="text-gray-600">{venue.location}</p>
-            <p className="text-green-600 font-semibold">₹{venue.price}/hour</p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Booking Form */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Book Your Court</h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={bookingData.date}
+                    onChange={handleInputChange}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+                  <select
+                    name="time"
+                    value={bookingData.time}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    required
+                  >
+                    <option value="">Select time</option>
+                    {timeSlots.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Duration (hours)</label>
+                  <select
+                    name="duration"
+                    value={bookingData.duration}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    <option value={1}>1 hour</option>
+                    <option value={2}>2 hours</option>
+                    <option value={3}>3 hours</option>
+                    <option value={4}>4 hours</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Court</label>
+                  <select
+                    name="court"
+                    value={bookingData.court}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  >
+                    {courts.map((court) => (
+                      <option key={court} value={court}>
+                        {court}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Player Name</label>
+                <input
+                  type="text"
+                  name="playerName"
+                  value={bookingData.playerName}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  name="playerEmail"
+                  value={bookingData.playerEmail}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  name="playerPhone"
+                  value={bookingData.playerPhone}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors duration-200"
+              >
+                Continue to Payment
+              </button>
+            </form>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Date Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                min={getTomorrowDate()}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+          {/* Booking Summary */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Booking Summary</h3>
 
-            {/* Time Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Time</label>
-              <select
-                name="time"
-                value={formData.time}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">Choose time slot</option>
-                {timeSlots.map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Duration Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Duration (hours)</label>
-              <select
-                name="duration"
-                value={formData.duration}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                {[1, 2, 3, 4, 5].map((hour) => (
-                  <option key={hour} value={hour}>
-                    {hour} hour{hour > 1 ? "s" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Court Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Court</label>
-              <div className="grid grid-cols-2 gap-3">
-                {courts.map((court) => (
-                  <label key={court} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="court"
-                      value={court}
-                      checked={formData.court === court}
-                      onChange={handleInputChange}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-gray-700">{court}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Total Cost */}
-            {formData.duration && (
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-900">Total Cost:</span>
-                  <span className="text-2xl font-bold text-green-600">₹{venue.price * formData.duration}</span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <img
+                  src={venue.image || "/placeholder.svg"}
+                  alt={venue.name}
+                  className="w-16 h-16 object-cover rounded-lg"
+                />
+                <div>
+                  <h4 className="font-semibold text-gray-900">{venue.name}</h4>
+                  <p className="text-sm text-gray-600">{venue.location}</p>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {formData.duration} hour{formData.duration > 1 ? "s" : ""} × ₹{venue.price}/hour
-                </p>
               </div>
-            )}
 
-            <button
-              type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-semibold text-lg transition-colors"
-            >
-              Continue to Payment → ₹{venue.price * formData.duration}
-            </button>
-          </form>
+              <div className="border-t pt-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Date:</span>
+                  <span className="font-medium">{bookingData.date || "Not selected"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Time:</span>
+                  <span className="font-medium">{bookingData.time || "Not selected"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Duration:</span>
+                  <span className="font-medium">{bookingData.duration} hour(s)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Court:</span>
+                  <span className="font-medium">{bookingData.court}</span>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Rate per hour:</span>
+                  <span className="font-medium">{venue.price}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Duration:</span>
+                  <span className="font-medium">{bookingData.duration} hour(s)</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
+                  <span>Total:</span>
+                  <span className="text-green-600">₹{calculateTotal()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -6,12 +6,19 @@ import AuthPage from "./components/AuthPage"
 import VenuesPage from "./components/VenuesPage"
 import SingleVenuePage from "./components/SingleVenuePage"
 import BookingForm from "./components/BookingForm"
+import UserDashboard from "./components/UserDashboard"
 import "./App.css"
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("landing") // 'landing', 'auth', 'venues', 'single-venue', 'booking', 'payment'
+  const [currentPage, setCurrentPage] = useState("landing") // 'landing', 'auth', 'venues', 'single-venue', 'booking', 'payment', 'dashboard'
   const [selectedVenue, setSelectedVenue] = useState(null)
   const [bookingData, setBookingData] = useState(null)
+  const [user, setUser] = useState({
+    name: "Mitchell Admin",
+    phone: "9999999999",
+    email: "mitchelladmin@gmail.com",
+    avatar: "/placeholder.svg?height=80&width=80",
+  })
 
   const showAuthPage = () => {
     setCurrentPage("auth")
@@ -24,6 +31,10 @@ function App() {
 
   const showVenuesPage = () => {
     setCurrentPage("venues")
+  }
+
+  const showDashboard = () => {
+    setCurrentPage("dashboard")
   }
 
   const showSingleVenue = (venue) => {
@@ -52,7 +63,15 @@ function App() {
   return (
     <div className="App">
       {currentPage === "landing" && <LandingPage onGetStarted={showAuthPage} onVenuesClick={showVenuesPage} />}
-      {currentPage === "auth" && <AuthPage onBackToHome={showLandingPage} />}
+      {currentPage === "auth" && <AuthPage onBackToHome={showLandingPage} onLoginSuccess={showDashboard} />}
+      {currentPage === "dashboard" && (
+        <UserDashboard
+          user={user}
+          onUpdateUser={setUser}
+          onBackToHome={showLandingPage}
+          onVenuesClick={showVenuesPage}
+        />
+      )}
       {currentPage === "venues" && (
         <VenuesPage onGetStarted={showAuthPage} onBackToHome={showLandingPage} onViewVenue={showSingleVenue} />
       )}
