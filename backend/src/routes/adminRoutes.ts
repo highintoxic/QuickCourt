@@ -37,4 +37,17 @@ router.delete(
 // System stats
 router.get("/stats", adminController.getSystemStats.bind(adminController));
 
+// Facility management routes
+router.get(
+	"/facilities",
+	validateQuery(paginationQuerySchema),
+	adminController.getAllFacilitiesForReview.bind(adminController)
+);
+
+router.patch(
+	"/facilities/:facilityId/status",
+	validateParams(idParamSchema),
+	adminController.updateFacilityStatus.bind(adminController)
+);
+
 export default router;

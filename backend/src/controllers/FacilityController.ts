@@ -1,23 +1,25 @@
 import { Request, Response, NextFunction } from "express";
 import { BaseController } from "./BaseController.js";
 import { prisma } from "../config/prisma.js";
+import {
+	CreateFacilityInput,
+	UpdateFacilityInput,
+	FacilityQuery,
+	UpdateFacilityStatusInput,
+} from "../types/controller-types.js";
 
 export class FacilityController extends BaseController {
 	// Create a new facility (Facility Owner or Admin)
 	async createFacility(req: Request, res: Response, next: NextFunction) {
 		try {
-			const { name, description, address, phone, email } = req.body;
+			const facilityData = req.body as CreateFacilityInput;
 			const ownerId = req.user!.id;
 
 			const facility = await prisma.facility.create({
 				data: {
-					name,
-					description,
-					address,
-					phone,
-					email,
+					...facilityData,
 					ownerId,
-				} as any, // Will fix after Prisma regeneration
+				},
 			});
 
 			return this.success(res, facility, "Facility created successfully", 201);
@@ -38,20 +40,25 @@ export class FacilityController extends BaseController {
 					id: true,
 					name: true,
 					description: true,
-					address: true,
+					addressLine: true,
+					city: true,
+					state: true,
+					pincode: true,
 					phone: true,
 					email: true,
 					isActive: true,
+					status: true,
 					createdAt: true,
 					updatedAt: true,
 					owner: {
 						select: {
 							id: true,
 							email: true,
+							fullName: true,
 						},
 					},
 				},
-			} as any); // Will fix after Prisma regeneration
+			});
 
 			return this.success(res, facilities);
 		} catch (error) {
@@ -73,10 +80,22 @@ export class FacilityController extends BaseController {
 						select: {
 							id: true,
 							email: true,
+							fullName: true,
 						},
 					},
+					courts: {
+						select: {
+							id: true,
+							name: true,
+							sport: true,
+							pricePerHour: true,
+							isActive: true,
+						},
+					},
+					photos: true,
+					amenities: true,
 				},
-			} as any); // Will fix after Prisma regeneration
+			});
 
 			if (!facility) {
 				return this.notFound(res, "Facility");
@@ -97,13 +116,13 @@ export class FacilityController extends BaseController {
 	async updateFacility(req: Request, res: Response, next: NextFunction) {
 		try {
 			const { facilityId } = req.params;
-			const { name, description, address, phone, email, isActive } = req.body;
+			const updateData = req.body as UpdateFacilityInput;
 			const userId = req.user!.id;
 			const isAdmin = req.user!.role === "ADMIN";
 
 			const facility = await prisma.facility.findUnique({
 				where: { id: facilityId },
-			} as any);
+			});
 
 			if (!facility) {
 				return this.notFound(res, "Facility");
@@ -116,23 +135,17 @@ export class FacilityController extends BaseController {
 
 			const updatedFacility = await prisma.facility.update({
 				where: { id: facilityId },
-				data: {
-					...(name && { name }),
-					...(description !== undefined && { description }),
-					...(address && { address }),
-					...(phone !== undefined && { phone }),
-					...(email !== undefined && { email }),
-					...(isActive !== undefined && { isActive }),
-				},
+				data: updateData,
 				include: {
 					owner: {
 						select: {
 							id: true,
 							email: true,
+							fullName: true,
 						},
 					},
 				},
-			} as any); // Will fix after Prisma regeneration
+			});
 
 			return this.success(
 				res,
@@ -153,7 +166,7 @@ export class FacilityController extends BaseController {
 
 			const facility = await prisma.facility.findUnique({
 				where: { id: facilityId },
-			} as any);
+			});
 
 			if (!facility) {
 				return this.notFound(res, "Facility");
@@ -166,7 +179,7 @@ export class FacilityController extends BaseController {
 
 			await prisma.facility.delete({
 				where: { id: facilityId },
-			} as any);
+			});
 
 			return this.success(res, null, "Facility deleted successfully");
 		} catch (error) {
@@ -177,20 +190,67 @@ export class FacilityController extends BaseController {
 	// Get all facilities (Public - for users to browse)
 	async getAllFacilities(req: Request, res: Response, next: NextFunction) {
 		try {
-			const facilities = await prisma.facility.findMany({
-				where: { isActive: true },
-				select: {
-					id: true,
-					name: true,
-					description: true,
-					address: true,
-					phone: true,
-					email: true,
-					createdAt: true,
-				},
-			} as any); // Will fix after Prisma regeneration
+			const query = req.query as FacilityQuery;
+			const page = parseInt(query.page || "1");
+			const limit = parseInt(query.limit || "10");
+			const skip = (page - 1) * limit;
 
-			return this.success(res, facilities);
+			const whereClause: any = {
+				isActive: true,
+				status: "APPROVED",
+			};
+
+			if (query.search) {
+				whereClause.OR = [
+					{ name: { contains: query.search, mode: "insensitive" } },
+					{ description: { contains: query.search, mode: "insensitive" } },
+					{ city: { contains: query.search, mode: "insensitive" } },
+				];
+			}
+
+			if (query.city) {
+				whereClause.city = { contains: query.city, mode: "insensitive" };
+			}
+
+			if (query.state) {
+				whereClause.state = { contains: query.state, mode: "insensitive" };
+			}
+
+			const [facilities, total] = await Promise.all([
+				prisma.facility.findMany({
+					where: whereClause,
+					select: {
+						id: true,
+						name: true,
+						description: true,
+						addressLine: true,
+						city: true,
+						state: true,
+						phone: true,
+						email: true,
+						ratingAvg: true,
+						ratingCount: true,
+						photos: {
+							take: 1,
+							orderBy: { sortOrder: "asc" },
+						},
+						createdAt: true,
+					},
+					skip,
+					take: limit,
+					orderBy: query.sort
+						? { [query.sort]: query.order || "desc" }
+						: { createdAt: "desc" },
+				}),
+				prisma.facility.count({ where: whereClause }),
+			]);
+
+			return this.successWithPagination(res, facilities, {
+				page,
+				limit,
+				total,
+				totalPages: Math.ceil(total / limit),
+			});
 		} catch (error) {
 			next(error);
 		}

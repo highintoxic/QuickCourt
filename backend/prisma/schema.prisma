@@ -71,6 +71,8 @@ model Facility {
     city            String
     state           String
     pincode         String
+    phone           String?
+    email           String?
     geoLat          Float?
     geoLng          Float?
     venueType       VenueType      @default(INDOOR)

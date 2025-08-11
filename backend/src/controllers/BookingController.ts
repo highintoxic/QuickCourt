@@ -2,24 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import { BaseController } from "./BaseController";
 import { prisma } from "../config/prisma";
 import { EnhancedBookingService } from "../services/enhancedBookingService";
-
-interface CreateBookingInput {
-	courtId: string;
-	date: string;
-	startTime: string;
-	endTime: string;
-}
-
-interface UpdateBookingStatusInput {
-	status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
-}
-
-interface AvailabilityCheckInput {
-	facilityId: string;
-	date: string;
-	startTime: string;
-	endTime: string;
-}
+import {
+	CreateBookingInput,
+	UpdateBookingStatusInput,
+	AvailabilityCheckInput,
+	BookingQuery,
+} from "../types/controller-types";
 
 export class BookingController extends BaseController {
 	// Create a new booking with Redis-based conflict management
@@ -61,16 +49,23 @@ export class BookingController extends BaseController {
 	async getUserBookings(req: Request, res: Response, next: NextFunction) {
 		try {
 			const userId = req.user!.id;
-			const { page = 1, limit = 10, sort, order = "desc" } = req.query as any;
+			const query = req.query as BookingQuery;
+			const page = parseInt(query.page || "1");
+			const limit = parseInt(query.limit || "10");
+			const skip = (page - 1) * limit;
 
-			const skip = (Number(page) - 1) * Number(limit);
-			const orderBy = sort ? { [sort as string]: order } : { createdAt: order };
+			const orderBy =
+				query.sort &&
+				query.sort in
+					{ createdAt: true, startsAt: true, endsAt: true, totalAmount: true }
+					? { [query.sort]: query.order || ("desc" as "asc" | "desc") }
+					: { createdAt: "desc" as "desc" };
 
 			const [bookings, total] = await Promise.all([
 				prisma.booking.findMany({
 					where: { userId },
 					skip,
-					take: Number(limit),
+					take: limit,
 					orderBy,
 					include: {
 						court: {
@@ -87,10 +82,10 @@ export class BookingController extends BaseController {
 			]);
 
 			return this.successWithPagination(res, bookings, {
-				page: Number(page),
-				limit: Number(limit),
+				page,
+				limit,
 				total,
-				totalPages: Math.ceil(total / Number(limit)),
+				totalPages: Math.ceil(total / limit),
 			});
 		} catch (error) {
 			next(error);
@@ -182,7 +177,7 @@ export class BookingController extends BaseController {
 			// Use enhanced service with Redis cache management
 			const updatedBooking = await EnhancedBookingService.updateBookingStatus(
 				id,
-				status as any,
+				status,
 				userId,
 				userRole
 			);
@@ -225,7 +220,9 @@ export class BookingController extends BaseController {
 	async getFacilityBookings(req: Request, res: Response, next: NextFunction) {
 		try {
 			const { id: facilityId } = req.params;
-			const { page = 1, limit = 10, sort, order = "desc" } = req.query as any;
+			const query = req.query as BookingQuery;
+			const page = parseInt(query.page || "1");
+			const limit = parseInt(query.limit || "10");
 			const userId = req.user!.id;
 			const userRole = req.user!.role;
 
@@ -246,8 +243,13 @@ export class BookingController extends BaseController {
 				return this.forbidden(res);
 			}
 
-			const skip = (Number(page) - 1) * Number(limit);
-			const orderBy = sort ? { [sort as string]: order } : { createdAt: order };
+			const skip = (page - 1) * limit;
+			const orderBy =
+				query.sort &&
+				query.sort in
+					{ createdAt: true, startsAt: true, endsAt: true, totalAmount: true }
+					? { [query.sort]: query.order || ("desc" as "asc" | "desc") }
+					: { createdAt: "desc" as "desc" };
 
 			const [bookings, total] = await Promise.all([
 				prisma.booking.findMany({
@@ -255,7 +257,7 @@ export class BookingController extends BaseController {
 						court: { facilityId },
 					},
 					skip,
-					take: Number(limit),
+					take: limit,
 					orderBy,
 					include: {
 						court: true,
@@ -275,10 +277,10 @@ export class BookingController extends BaseController {
 			]);
 
 			return this.successWithPagination(res, bookings, {
-				page: Number(page),
-				limit: Number(limit),
+				page,
+				limit,
 				total,
-				totalPages: Math.ceil(total / Number(limit)),
+				totalPages: Math.ceil(total / limit),
 			});
 		} catch (error) {
 			next(error);
