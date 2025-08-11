@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+"use client"
 
-function VenuesPage({ onGetStarted, onBackToHome }) {
-  const [venues, setVenues] = useState([]);
-  const [filteredVenues, setFilteredVenues] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
+import { useState, useEffect } from "react"
+
+function VenuesPage({ onGetStarted, onBackToHome, onViewVenue }) {
+  const [venues, setVenues] = useState([])
+  const [filteredVenues, setFilteredVenues] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
   const [filters, setFilters] = useState({
-    search: '',
-    location: '',
-    priceRange: '',
-    venueType: '',
-    rating: '',
-    amenities: []
-  });
-  const [isLoading, setIsLoading] = useState(false);
+    search: "",
+    location: "",
+    priceRange: "",
+    venueType: "",
+    rating: "",
+    amenities: [],
+  })
+  const [isLoading, setIsLoading] = useState(false)
 
-  const venuesPerPage = 12;
+  const venuesPerPage = 12
 
   // Sample venue data
   const sampleVenues = [
@@ -27,7 +29,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Indoor",
       amenities: ["Parking", "AC", "Changing Room", "Equipment"],
-      description: "State-of-the-art indoor sports facility"
+      description: "State-of-the-art indoor sports facility",
     },
     {
       id: 2,
@@ -38,7 +40,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Outdoor",
       amenities: ["Parking", "Lighting", "Seating"],
-      description: "Beautiful outdoor courts in the heart of the city"
+      description: "Beautiful outdoor courts in the heart of the city",
     },
     {
       id: 3,
@@ -49,7 +51,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Indoor",
       amenities: ["AC", "Professional Courts", "Coaching", "Equipment"],
-      description: "Professional badminton facility with expert coaching"
+      description: "Professional badminton facility with expert coaching",
     },
     {
       id: 4,
@@ -60,7 +62,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Indoor",
       amenities: ["Parking", "Basic Facilities"],
-      description: "Affordable community sports facility"
+      description: "Affordable community sports facility",
     },
     {
       id: 5,
@@ -71,7 +73,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Outdoor",
       amenities: ["Scenic View", "Parking", "Lighting"],
-      description: "Tennis courts with beautiful riverside views"
+      description: "Tennis courts with beautiful riverside views",
     },
     {
       id: 6,
@@ -82,7 +84,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Indoor",
       amenities: ["AC", "Multiple Courts", "Cafeteria", "Parking"],
-      description: "Large sports complex with multiple facilities"
+      description: "Large sports complex with multiple facilities",
     },
     {
       id: 7,
@@ -93,7 +95,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Outdoor",
       amenities: ["Garden View", "Parking", "Seating"],
-      description: "Peaceful courts surrounded by gardens"
+      description: "Peaceful courts surrounded by gardens",
     },
     {
       id: 8,
@@ -104,7 +106,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Indoor",
       amenities: ["Professional Grade", "AC", "Live Streaming", "Equipment"],
-      description: "Tournament-grade professional sports arena"
+      description: "Tournament-grade professional sports arena",
     },
     {
       id: 9,
@@ -115,7 +117,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Outdoor",
       amenities: ["Evening Lighting", "Parking", "Refreshments"],
-      description: "Perfect for evening games with great lighting"
+      description: "Perfect for evening games with great lighting",
     },
     {
       id: 10,
@@ -126,7 +128,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Indoor",
       amenities: ["Student Discount", "Basic Facilities", "Parking"],
-      description: "University-affiliated sports facility"
+      description: "University-affiliated sports facility",
     },
     {
       id: 11,
@@ -137,7 +139,7 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Indoor",
       amenities: ["Luxury", "Spa", "Restaurant", "Valet Parking"],
-      description: "Premium luxury sports and wellness facility"
+      description: "Premium luxury sports and wellness facility",
     },
     {
       id: 12,
@@ -148,109 +150,118 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
       image: "/placeholder.svg?height=200&width=300",
       type: "Outdoor",
       amenities: ["Basic Facilities", "Affordable"],
-      description: "Simple and affordable neighborhood courts"
-    }
-  ];
+      description: "Simple and affordable neighborhood courts",
+    },
+  ]
 
   useEffect(() => {
     // Simulate loading venues
-    setIsLoading(true);
+    setIsLoading(true)
     setTimeout(() => {
-      setVenues(sampleVenues);
-      setFilteredVenues(sampleVenues);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+      setVenues(sampleVenues)
+      setFilteredVenues(sampleVenues)
+      setIsLoading(false)
+    }, 1000)
+  }, [])
 
   // Filter venues based on current filters
   useEffect(() => {
-    let filtered = venues.filter(venue => {
-      const matchesSearch = venue.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-                           venue.location.toLowerCase().includes(filters.search.toLowerCase());
-      
-      const matchesLocation = !filters.location || venue.location === filters.location;
-      
-      const matchesType = !filters.venueType || venue.type === filters.venueType;
-      
-      const matchesPrice = !filters.priceRange || 
-        (filters.priceRange === 'low' && venue.price <= 50) ||
-        (filters.priceRange === 'medium' && venue.price > 50 && venue.price <= 80) ||
-        (filters.priceRange === 'high' && venue.price > 80);
-      
-      const matchesRating = !filters.rating || venue.rating >= parseFloat(filters.rating);
+    const filtered = venues.filter((venue) => {
+      const matchesSearch =
+        venue.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        venue.location.toLowerCase().includes(filters.search.toLowerCase())
 
-      return matchesSearch && matchesLocation && matchesType && matchesPrice && matchesRating;
-    });
+      const matchesLocation = !filters.location || venue.location === filters.location
 
-    setFilteredVenues(filtered);
-    setCurrentPage(1);
-  }, [filters, venues]);
+      const matchesType = !filters.venueType || venue.type === filters.venueType
+
+      const matchesPrice =
+        !filters.priceRange ||
+        (filters.priceRange === "low" && venue.price <= 50) ||
+        (filters.priceRange === "medium" && venue.price > 50 && venue.price <= 80) ||
+        (filters.priceRange === "high" && venue.price > 80)
+
+      const matchesRating = !filters.rating || venue.rating >= Number.parseFloat(filters.rating)
+
+      return matchesSearch && matchesLocation && matchesType && matchesPrice && matchesRating
+    })
+
+    setFilteredVenues(filtered)
+    setCurrentPage(1)
+  }, [filters, venues])
 
   const handleFilterChange = (filterType, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [filterType]: value
-    }));
-  };
+      [filterType]: value,
+    }))
+  }
 
   const handleSearch = () => {
     // Search is handled automatically by useEffect
-    console.log('Searching with filters:', filters);
-  };
+    console.log("Searching with filters:", filters)
+  }
 
   const clearFilters = () => {
     setFilters({
-      search: '',
-      location: '',
-      priceRange: '',
-      venueType: '',
-      rating: '',
-      amenities: []
-    });
-  };
+      search: "",
+      location: "",
+      priceRange: "",
+      venueType: "",
+      rating: "",
+      amenities: [],
+    })
+  }
 
   // Pagination
-  const indexOfLastVenue = currentPage * venuesPerPage;
-  const indexOfFirstVenue = indexOfLastVenue - venuesPerPage;
-  const currentVenues = filteredVenues.slice(indexOfFirstVenue, indexOfLastVenue);
-  const totalPages = Math.ceil(filteredVenues.length / venuesPerPage);
+  const indexOfLastVenue = currentPage * venuesPerPage
+  const indexOfFirstVenue = indexOfLastVenue - venuesPerPage
+  const currentVenues = filteredVenues.slice(indexOfFirstVenue, indexOfLastVenue)
+  const totalPages = Math.ceil(filteredVenues.length / venuesPerPage)
 
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    setCurrentPage(pageNumber)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
 
   const handleVenueBook = (venue) => {
-    console.log('Booking venue:', venue);
-    onGetStarted(); // Redirect to auth for booking
-  };
+    if (onViewVenue) {
+      onViewVenue(venue)
+    }
+  }
 
   const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
+    const stars = []
+    const fullStars = Math.floor(rating)
+    const hasHalfStar = rating % 1 !== 0
 
     for (let i = 0; i < fullStars; i++) {
       stars.push(
-        <span key={i} className="text-yellow-400">★</span>
-      );
+        <span key={i} className="text-yellow-400">
+          ★
+        </span>,
+      )
     }
 
     if (hasHalfStar) {
       stars.push(
-        <span key="half" className="text-yellow-400">☆</span>
-      );
+        <span key="half" className="text-yellow-400">
+          ☆
+        </span>,
+      )
     }
 
-    const emptyStars = 5 - Math.ceil(rating);
+    const emptyStars = 5 - Math.ceil(rating)
     for (let i = 0; i < emptyStars; i++) {
       stars.push(
-        <span key={`empty-${i}`} className="text-gray-300">★</span>
-      );
+        <span key={`empty-${i}`} className="text-gray-300">
+          ★
+        </span>,
+      )
     }
 
-    return stars;
-  };
+    return stars
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -265,18 +276,14 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
               <span className="text-xl font-semibold text-gray-800">QuickCourt</span>
             </div>
             <div className="hidden md:flex space-x-8">
-              <button 
-                onClick={onBackToHome}
-                className="text-gray-700 hover:text-teal-600 font-medium"
-              >
+              <button onClick={onBackToHome} className="text-gray-700 hover:text-teal-600 font-medium">
                 Home
               </button>
               <span className="text-teal-600 font-medium">Venues</span>
-              <a href="#" className="text-gray-700 hover:text-teal-600 font-medium">Court Booking</a>
-              <button 
-                onClick={onGetStarted}
-                className="text-gray-700 hover:text-teal-600 font-medium"
-              >
+              <a href="#" className="text-gray-700 hover:text-teal-600 font-medium">
+                Court Booking
+              </a>
+              <button onClick={onGetStarted} className="text-gray-700 hover:text-teal-600 font-medium">
                 Get Started
               </button>
             </div>
@@ -300,16 +307,14 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
           <div className="lg:w-1/4">
             <div className="bg-white rounded-lg shadow-sm p-6 sticky top-4">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
-              
+
               {/* Search */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search Venues
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Search Venues</label>
                 <input
                   type="text"
                   value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
                   placeholder="Search by name or location..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
@@ -317,12 +322,10 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
 
               {/* Location Filter */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Location
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
                 <select
                   value={filters.location}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
+                  onChange={(e) => handleFilterChange("location", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">All Locations</option>
@@ -336,12 +339,10 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
 
               {/* Price Range */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Price Range
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
                 <select
                   value={filters.priceRange}
-                  onChange={(e) => handleFilterChange('priceRange', e.target.value)}
+                  onChange={(e) => handleFilterChange("priceRange", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">All Prices</option>
@@ -353,12 +354,10 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
 
               {/* Venue Type */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Venue Type
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Venue Type</label>
                 <select
                   value={filters.venueType}
-                  onChange={(e) => handleFilterChange('venueType', e.target.value)}
+                  onChange={(e) => handleFilterChange("venueType", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">All Types</option>
@@ -369,12 +368,10 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
 
               {/* Rating Filter */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Minimum Rating
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Rating</label>
                 <select
                   value={filters.rating}
-                  onChange={(e) => handleFilterChange('rating', e.target.value)}
+                  onChange={(e) => handleFilterChange("rating", e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">Any Rating</option>
@@ -427,28 +424,16 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
                         />
                       </div>
                       <div className="p-4">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                          {venue.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-2">
-                          📍 {venue.location}
-                        </p>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{venue.name}</h3>
+                        <p className="text-sm text-gray-600 mb-2">📍 {venue.location}</p>
                         <div className="flex items-center mb-2">
-                          <div className="flex items-center mr-2">
-                            {renderStars(venue.rating)}
-                          </div>
-                          <span className="text-sm text-gray-600">
-                            ({venue.rating})
-                          </span>
+                          <div className="flex items-center mr-2">{renderStars(venue.rating)}</div>
+                          <span className="text-sm text-gray-600">({venue.rating})</span>
                         </div>
-                        <p className="text-sm text-gray-600 mb-3">
-                          {venue.description}
-                        </p>
+                        <p className="text-sm text-gray-600 mb-3">{venue.description}</p>
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="text-lg font-bold text-green-600">
-                              ₹{venue.price}
-                            </span>
+                            <span className="text-lg font-bold text-green-600">₹{venue.price}</span>
                             <span className="text-sm text-gray-500">/hour</span>
                           </div>
                           <button
@@ -460,17 +445,12 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
                         </div>
                         <div className="mt-3 flex flex-wrap gap-1">
                           {venue.amenities.slice(0, 2).map((amenity, index) => (
-                            <span
-                              key={index}
-                              className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded"
-                            >
+                            <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
                               {amenity}
                             </span>
                           ))}
                           {venue.amenities.length > 2 && (
-                            <span className="text-xs text-gray-500">
-                              +{venue.amenities.length - 2} more
-                            </span>
+                            <span className="text-xs text-gray-500">+{venue.amenities.length - 2} more</span>
                           )}
                         </div>
                       </div>
@@ -488,24 +468,24 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
                     >
                       Previous
                     </button>
-                    
+
                     {[...Array(totalPages)].map((_, index) => {
-                      const pageNumber = index + 1;
+                      const pageNumber = index + 1
                       return (
                         <button
                           key={pageNumber}
                           onClick={() => handlePageChange(pageNumber)}
                           className={`px-3 py-2 text-sm font-medium rounded-md ${
                             currentPage === pageNumber
-                              ? 'bg-teal-600 text-white'
-                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                              ? "bg-teal-600 text-white"
+                              : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
                           }`}
                         >
                           {pageNumber}
                         </button>
-                      );
+                      )
                     })}
-                    
+
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage === totalPages}
@@ -520,7 +500,12 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
                   <div className="text-center py-12">
                     <div className="text-gray-400 mb-4">
                       <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1}
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h6m-6 4h6m-6 4h6"
+                        />
                       </svg>
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No venues found</h3>
@@ -548,13 +533,11 @@ function VenuesPage({ onGetStarted, onBackToHome }) {
             </div>
             <span className="text-xl font-semibold">QuickCourt</span>
           </div>
-          <p className="text-gray-300">
-            © 2024 QuickCourt. All rights reserved. | Privacy Policy | Terms of Service
-          </p>
+          <p className="text-gray-300">© 2024 QuickCourt. All rights reserved. | Privacy Policy | Terms of Service</p>
         </div>
       </footer>
     </div>
-  );
+  )
 }
 
-export default VenuesPage;
+export default VenuesPage

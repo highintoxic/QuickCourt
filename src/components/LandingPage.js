@@ -243,7 +243,7 @@ function LandingPage({ onGetStarted, onVenuesClick }) {
               <div className="space-y-2 text-gray-300">
                 <p>📍 123 Sports Avenue</p>
                 <p>📞 (555) 123-4567</p>
-                <p>✉️ info@quickcourt.com</p>
+                <p>✉ info@quickcourt.com</p>
                 <p>🕒 Mon-Sun: 6AM-10PM</p>
               </div>
             </div>
