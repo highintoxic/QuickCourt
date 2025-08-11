@@ -407,6 +407,7 @@ async function main() {
 main()
   .catch((e) => {
     console.error('❌ Error seeding database:', e);
+    //@ts-ignore
     process.exit(1);
   })
   .finally(async () => {

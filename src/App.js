@@ -7,6 +7,7 @@ import VenuesPage from "./components/VenuesPage"
 import SingleVenuePage from "./components/SingleVenuePage"
 import BookingForm from "./components/BookingForm"
 import UserDashboard from "./components/UserDashboard"
+import { AuthProvider } from "./contexts/AuthContext"
 import "./App.css"
 
 function App() {
@@ -94,38 +95,11 @@ function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Booking Confirmed!</h2>
-              <div className="text-left space-y-2 mb-6">
-                <p>
-                  <strong>Venue:</strong> {bookingData.venue.name}
-                </p>
-                <p>
-                  <strong>Date:</strong> {bookingData.date}
-                </p>
-                <p>
-                  <strong>Time:</strong> {bookingData.time}
-                </p>
-                <p>
-                  <strong>Duration:</strong> {bookingData.duration} hour(s)
-                </p>
-                <p>
-                  <strong>Court:</strong> {bookingData.court}
-                </p>
-                <p>
-                  <strong>Total:</strong> ₹{bookingData.total}
-                </p>
-              </div>
-              <button
-                onClick={backToVenues}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
-              >
-                Book Another Venue
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </AuthProvider>
   )
 }
 
