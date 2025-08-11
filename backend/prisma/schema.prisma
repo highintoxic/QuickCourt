@@ -1,0 +1,53 @@
+// Prisma schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id            String         @id @default(cuid())
+    email         String         @unique
+    phone         String?        @unique
+    passwordHash  String
+    isVerified    Boolean        @default(false)
+    createdAt     DateTime       @default(now())
+    updatedAt     DateTime       @updatedAt
+    otps          OTP[]
+    refreshTokens RefreshToken[]
+}
+
+model OTP {
+    id         String     @id @default(cuid())
+    code       String
+    channel    OTPChannel
+    expiresAt  DateTime
+    consumedAt DateTime?
+    user       User       @relation(fields: [userId], references: [id])
+    userId     String
+    createdAt  DateTime   @default(now())
+
+    @@index([userId, channel])
+}
+
+model RefreshToken {
+    id         String    @id @default(cuid()) // also used as jti in JWT
+    user       User      @relation(fields: [userId], references: [id])
+    userId     String
+    revokedAt  DateTime?
+    replacedBy String?
+    createdAt  DateTime  @default(now())
+    expiresAt  DateTime
+
+    @@index([userId])
+}
+
+enum OTPChannel {
+    EMAIL
+    SMS
+    WHATSAPP
+}
