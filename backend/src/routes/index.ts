@@ -3,6 +3,8 @@ import authRoutes from "./authRoutes.js";
 import adminRoutes from "./adminRoutes.js";
 import facilityRoutes from "./facilityRoutes.js";
 import bookingRoutes from "./bookingRoutes.js";
+import userRoutes from "./userRoutes.js";
+import courtRoutes from "./courtRoutes.js";
 
 // Simple route registration
 export const registerRoutes = (app: Application) => {
@@ -14,10 +16,8 @@ export const registerRoutes = (app: Application) => {
 	app.use("/api/admin", adminRoutes);
 	app.use("/api/facilities", facilityRoutes);
 	app.use("/api/bookings", bookingRoutes);
-
-	// Add more routes here as you create them:
-	// app.use("/api/users", userRoutes);
-	// app.use("/api/courts", courtRoutes);
+	app.use("/api/user", userRoutes);
+	app.use("/api/courts", courtRoutes);
 
 	console.log("✅ All routes registered successfully");
 };

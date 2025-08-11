@@ -70,3 +70,51 @@ export interface UpdateFacilityStatusInput {
 	status: "PENDING" | "APPROVED" | "REJECTED";
 	rejectionReason?: string;
 }
+
+export interface UpdateUserProfileInput {
+	fullName?: string;
+	phone?: string;
+	avatarUrl?: string;
+}
+
+export interface ChangePasswordInput {
+	currentPassword: string;
+	newPassword: string;
+	confirmPassword: string;
+}
+
+// Court Management Types
+export interface CreateCourtInput {
+	name: string;
+	sportId: string;
+	pricePerHour: number;
+	opensAt: string;
+	closesAt: string;
+	isActive?: boolean;
+}
+
+export interface UpdateCourtInput {
+	name?: string;
+	sportId?: string;
+	pricePerHour?: number;
+	opensAt?: string;
+	closesAt?: string;
+	isActive?: boolean;
+}
+
+export interface CreateCourtUnavailabilityInput {
+	startsAt: string;
+	endsAt: string;
+	reason: "MAINTENANCE" | "BLOCKED" | "OTHER";
+}
+
+export interface CourtAvailabilityQuery {
+	date: string;
+	startTime?: string;
+	endTime?: string;
+}
+
+export interface CreateSportInput {
+	name: string;
+	icon?: string;
+}
