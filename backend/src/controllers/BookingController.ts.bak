@@ -1,0 +1,382 @@
+import { Request, Response, NextFunction } from "express";
+import { BaseController } from "./BaseController.js";
+import { prisma } from "../config/prisma.js";
+import { EnhancedBookingService } from "../services/enhancedBookingService.js";
+import type {
+	CreateBookingInput,
+	UpdateBookingStatusInput,
+	IdParamInput,
+	PaginationQueryInput,
+	AvailabilityCheckInput,
+} from "../utils/validation.js";
+
+export class BookingController extends BaseController {
+	// Create a new booking with Redis-based conflict management
+	async createBooking(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { courtId, startTime, endTime } = req.body as CreateBookingInput;
+			const userId = req.user!.id;
+
+			// Use enhanced service with Redis locking and conflict detection
+			const booking = await EnhancedBookingService.createBookingWithLock({
+				userId,
+				courtId,
+				startTime: new Date(startTime),
+				endTime: new Date(endTime),
+			});
+
+			return this.success(res, booking, "Booking created successfully", 201);
+		} catch (error: any) {
+			if (error.message.includes('conflict') || 
+				error.message.includes('not available') ||
+				error.message.includes('lock')) {
+				return this.error(res, error.message, 409);
+			}
+			if (error.message.includes('not found') || 
+				error.message.includes('inactive')) {
+				return this.notFound(res, "Active court");
+			}
+			next(error);
+		}
+	}
+			const conflictingBooking = await prisma.booking.findFirst({
+				where: {
+					courtId,
+					status: { in: ["PENDING", "CONFIRMED"] },
+					OR: [
+						{
+							AND: [
+								{ startsAt: { lte: new Date(startTime) } },
+								{ endsAt: { gt: new Date(startTime) } },
+							],
+						},
+						{
+							AND: [
+								{ startsAt: { lt: new Date(endTime) } },
+								{ endsAt: { gte: new Date(endTime) } },
+							],
+						},
+						{
+							AND: [
+								{ startsAt: { gte: new Date(startTime) } },
+								{ endsAt: { lte: new Date(endTime) } },
+							],
+						},
+					],
+				},
+			});
+
+			if (conflictingBooking) {
+				return this.error(
+					res,
+					"Court is not available for the selected time slot",
+					409
+				);
+			}
+
+			// Calculate duration and total amount
+			const start = new Date(startTime);
+			const end = new Date(endTime);
+			const durationHours =
+				(end.getTime() - start.getTime()) / (1000 * 60 * 60);
+			const totalAmount = durationHours * Number(court.pricePerHour);
+
+			// Create booking
+			const booking = await prisma.booking.create({
+				data: {
+					userId,
+					courtId,
+					startsAt: start,
+					endsAt: end,
+					hours: durationHours,
+					unitPrice: court.pricePerHour,
+					totalAmount,
+				},
+				include: {
+					court: {
+						include: { facility: true },
+					},
+					user: {
+						select: { id: true, email: true, fullName: true },
+					},
+				},
+			});
+
+			return this.success(res, booking, "Booking created successfully", 201);
+		} catch (error) {
+			next(error);
+		}
+	}
+
+	// Get user's bookings
+	async getUserBookings(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { page = 1, limit = 10, sort, order = "desc" } = req.query as any;
+			const userId = req.user!.id;
+
+			const skip = (Number(page) - 1) * Number(limit);
+			const orderBy = sort ? { [sort as string]: order } : { createdAt: order };
+
+			const [bookings, total] = await Promise.all([
+				prisma.booking.findMany({
+					where: { userId },
+					skip,
+					take: Number(limit),
+					orderBy,
+					include: {
+						court: {
+							include: { facility: true },
+						},
+						payment: {
+							select: { id: true, amount: true, status: true, createdAt: true },
+						},
+					},
+				}),
+				prisma.booking.count({ where: { userId } }),
+			]);
+
+			return this.successWithPagination(res, bookings, {
+				page: Number(page),
+				limit: Number(limit),
+				total,
+				totalPages: Math.ceil(total / Number(limit)),
+			});
+		} catch (error) {
+			next(error);
+		}
+	}
+
+	// Get booking by ID
+	async getBookingById(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { id } = req.params as IdParamInput;
+			const userId = req.user!.id;
+			const userRole = req.user!.role;
+
+			const booking = await prisma.booking.findUnique({
+				where: { id },
+				include: {
+					court: {
+						include: { facility: true },
+					},
+					user: {
+						select: { id: true, email: true, fullName: true },
+					},
+					payment: true,
+				},
+			});
+
+			if (!booking) {
+				return this.notFound(res, "Booking");
+			}
+
+			// Check permission - user can see their own bookings, facility owners can see bookings for their facilities
+			const canAccess =
+				booking.userId === userId ||
+				userRole === "ADMIN" ||
+				(userRole === "FACILITY_OWNER" &&
+					booking.court.facility.ownerId === userId);
+
+			if (!canAccess) {
+				return this.forbidden(res);
+			}
+
+			return this.success(res, booking);
+		} catch (error) {
+			next(error);
+		}
+	}
+
+	// Update booking status (for facility owners)
+	async updateBookingStatus(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { id } = req.params as IdParamInput;
+			const { status } = req.body as UpdateBookingStatusInput;
+			const userId = req.user!.id;
+			const userRole = req.user!.role;
+
+			const booking = await prisma.booking.findUnique({
+				where: { id },
+				include: {
+					court: {
+						include: { facility: true },
+					},
+				},
+			});
+
+			if (!booking) {
+				return this.notFound(res, "Booking");
+			}
+
+			// Check permission - only facility owners can update status of their facility bookings or admins
+			const canUpdate =
+				userRole === "ADMIN" ||
+				(userRole === "FACILITY_OWNER" &&
+					booking.court.facility.ownerId === userId);
+
+			if (!canUpdate) {
+				return this.forbidden(res);
+			}
+
+			const updatedBooking = await prisma.booking.update({
+				where: { id },
+				data: {
+					status,
+					updatedAt: new Date(),
+				},
+				include: {
+					court: {
+						include: { facility: true },
+					},
+					user: {
+						select: { id: true, email: true, fullName: true },
+					},
+				},
+			});
+
+			return this.success(
+				res,
+				updatedBooking,
+				"Booking status updated successfully"
+			);
+		} catch (error) {
+			next(error);
+		}
+	}
+
+	// Cancel booking (for users) with Redis cache update
+	async cancelBooking(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { id } = req.params as IdParamInput;
+			const userId = req.user!.id;
+
+			// Use enhanced service with Redis cache management
+			const updatedBooking = await EnhancedBookingService.cancelBooking(id, userId);
+
+			return this.success(res, updatedBooking, "Booking cancelled successfully");
+		} catch (error: any) {
+			if (error.message.includes('not found')) {
+				return this.notFound(res, "Booking");
+			}
+			if (error.message.includes('not authorized')) {
+				return this.forbidden(res);
+			}
+			if (error.message.includes('Cannot cancel')) {
+				return this.error(res, error.message, 400);
+			}
+			next(error);
+		}
+	}
+
+	// Update booking status (for facility owners) with Redis cache management
+	async updateBookingStatus(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { id } = req.params as IdParamInput;
+			const { status } = req.body as UpdateBookingStatusInput;
+			const userId = req.user!.id;
+			const userRole = req.user!.role;
+
+			// Use enhanced service with Redis cache management
+			const updatedBooking = await EnhancedBookingService.updateBookingStatus(
+				id, 
+				status as any, 
+				userId, 
+				userRole
+			);
+
+			return this.success(res, updatedBooking, "Booking status updated successfully");
+		} catch (error: any) {
+			if (error.message.includes('not found')) {
+				return this.notFound(res, "Booking");
+			}
+			if (error.message.includes('not authorized')) {
+				return this.forbidden(res);
+			}
+			next(error);
+		}
+	}
+
+	// Check availability for a specific time slot using enhanced service
+	async checkAvailability(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { facilityId, date, startTime, endTime } =
+				req.query as AvailabilityCheckInput;
+
+			// Use enhanced bulk availability check
+			const availability = await EnhancedBookingService.checkBulkAvailability(
+				facilityId, 
+				new Date(date), 
+				startTime, 
+				endTime
+			);
+
+			return this.success(res, { availability });
+		} catch (error) {
+			next(error);
+		}
+	}
+
+	// Get facility bookings (for facility owners)
+	async getFacilityBookings(req: Request, res: Response, next: NextFunction) {
+		try {
+			const { id: facilityId } = req.params as IdParamInput;
+			const { page = 1, limit = 10, sort, order = "desc" } = req.query as any;
+			const userId = req.user!.id;
+			const userRole = req.user!.role;
+
+			// Check permission
+			const facility = await prisma.facility.findUnique({
+				where: { id: facilityId },
+			});
+
+			if (!facility) {
+				return this.notFound(res, "Facility");
+			}
+
+			const canAccess =
+				userRole === "ADMIN" ||
+				(userRole === "FACILITY_OWNER" && facility.ownerId === userId);
+
+			if (!canAccess) {
+				return this.forbidden(res);
+			}
+
+			const skip = (Number(page) - 1) * Number(limit);
+			const orderBy = sort ? { [sort as string]: order } : { createdAt: order };
+
+			const [bookings, total] = await Promise.all([
+				prisma.booking.findMany({
+					where: {
+						court: { facilityId },
+					},
+					skip,
+					take: Number(limit),
+					orderBy,
+					include: {
+						court: true,
+						user: {
+							select: { id: true, email: true, fullName: true },
+						},
+						payment: {
+							select: { id: true, amount: true, status: true, createdAt: true },
+						},
+					},
+				}),
+				prisma.booking.count({
+					where: {
+						court: { facilityId },
+					},
+				}),
+			]);
+
+			return this.successWithPagination(res, bookings, {
+				page: Number(page),
+				limit: Number(limit),
+				total,
+				totalPages: Math.ceil(total / Number(limit)),
+			});
+		} catch (error) {
+			next(error);
+		}
+	}
+}

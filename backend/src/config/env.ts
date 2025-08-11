@@ -24,6 +24,13 @@ export const env = {
 			"7d",
 	},
 	dbUrl: process.env.DATABASE_URL!,
+	redis: {
+		host: process.env.REDIS_HOST || "localhost",
+		port: parseInt(process.env.REDIS_PORT || "6379", 10),
+		password: process.env.REDIS_PASSWORD || undefined,
+		db: parseInt(process.env.REDIS_DB || "0", 10),
+		url: process.env.REDIS_URL || undefined,
+	},
 	email: {
 		host: process.env.SMTP_HOST!,
 		port: parseInt(process.env.SMTP_PORT || "587", 10),

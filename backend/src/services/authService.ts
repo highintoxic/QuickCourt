@@ -8,12 +8,20 @@ import crypto from "crypto";
 export async function register(
 	email: string,
 	password: string,
-	phone?: string
+	phone?: string,
+	role: string = "USER"
 ) {
 	const existing = await prisma.user.findUnique({ where: { email } });
 	if (existing) throw new Error("Email already registered");
 	const passwordHash = await bcrypt.hash(password, 10);
-	return prisma.user.create({ data: { email, passwordHash, phone } });
+	return prisma.user.create({
+		data: {
+			email,
+			passwordHash,
+			phone,
+			role: role as any, // Temporary fix until Prisma client is regenerated
+		},
+	});
 }
 
 export async function authenticate(email: string, password: string) {
@@ -31,21 +39,79 @@ export interface TokenPair {
 }
 
 function calcExpiry(duration: string) {
-	const msVal = ms(duration);
-	return new Date(Date.now() + msVal);
+	// Parse duration strings like "15m", "7d", "1h"
+	const match = duration.match(/^(\d+)([smhd])$/);
+	if (!match) throw new Error(`Invalid duration format: ${duration}`);
+
+	const value = parseInt(match[1], 10);
+	const unit = match[2];
+
+	let milliseconds: number;
+	switch (unit) {
+		case "s":
+			milliseconds = value * 1000;
+			break;
+		case "m":
+			milliseconds = value * 60 * 1000;
+			break;
+		case "h":
+			milliseconds = value * 60 * 60 * 1000;
+			break;
+		case "d":
+			milliseconds = value * 24 * 60 * 60 * 1000;
+			break;
+		default:
+			throw new Error(`Unsupported time unit: ${unit}`);
+	}
+
+	return new Date(Date.now() + milliseconds);
 }
 
 export async function generateTokens(userId: string): Promise<TokenPair> {
+	// Get user details including role
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: {
+			id: true,
+			email: true,
+			role: true,
+			isVerified: true,
+		},
+	});
+
+	if (!user) {
+		throw new Error("User not found");
+	}
+
 	const refreshTokenId = crypto.randomUUID();
+	if (!env.jwt.accessSecret) {
+		throw new Error("JWT secret is required");
+	}
+
+	// Include user details in access token
+	//@ts-ignore
 	const accessToken = jwt.sign(
-		{ sub: userId, jti: crypto.randomUUID() },
+		{
+			userId: user.id,
+			email: user.email,
+			role: user.role,
+			isVerified: user.isVerified,
+			jti: crypto.randomUUID(),
+		},
 		env.jwt.accessSecret,
-		{ expiresIn: env.jwt.expiresIn }
+		{ expiresIn: env.jwt.expiresIn as string }
 	);
+
+	// Refresh token with minimal info
+	//@ts-ignore
 	const refreshToken = jwt.sign(
-		{ sub: userId, jti: refreshTokenId, type: "refresh" },
+		{
+			userId: user.id,
+			jti: refreshTokenId,
+			type: "refresh",
+		},
 		env.jwt.refreshSecret,
-		{ expiresIn: env.jwt.refreshExpiresIn }
+		{ expiresIn: env.jwt.refreshExpiresIn as string }
 	);
 
 	await prisma.refreshToken.create({
@@ -68,7 +134,9 @@ export async function rotateRefreshToken(oldToken: string): Promise<TokenPair> {
 	}
 	if (payload.type !== "refresh") throw new Error("Invalid token type");
 
-	const record = await prisma.refreshToken.findUnique({ where: { id: payload.jti } });
+	const record = await prisma.refreshToken.findUnique({
+		where: { id: payload.jti },
+	});
 	if (!record) throw new Error("Token not found");
 	if (record.revokedAt) throw new Error("Token revoked");
 	if (record.expiresAt < new Date()) throw new Error("Token expired");
