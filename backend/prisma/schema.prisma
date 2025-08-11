@@ -1,0 +1,327 @@
+// Prisma schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id           String   @id @default(cuid())
+    fullName     String?
+    email        String   @unique
+    phone        String?  @unique
+    passwordHash String
+    role         UserRole @default(USER)
+    avatarUrl    String?
+    isVerified   Boolean  @default(false)
+    createdAt    DateTime @default(now())
+    updatedAt    DateTime @updatedAt
+
+    // Relations
+    otps          OTP[]
+    refreshTokens RefreshToken[]
+    facilities    Facility[]     @relation("FacilityOwner")
+    bookings      Booking[]
+    reviews       Review[]
+    payouts       OwnerPayout[]
+    auditLogs     AuditLog[]
+
+    @@map("users")
+}
+
+model OTP {
+    id         String     @id @default(cuid())
+    userId     String
+    code       String
+    channel    OTPChannel
+    expiresAt  DateTime
+    consumedAt DateTime?
+    createdAt  DateTime   @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, channel])
+    @@map("otps")
+}
+
+model RefreshToken {
+    id         String    @id @default(cuid()) // also used as jti in JWT
+    userId     String
+    revokedAt  DateTime?
+    replacedBy String?
+    createdAt  DateTime  @default(now())
+    expiresAt  DateTime
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@map("refresh_tokens")
+}
+
+model Facility {
+    id              String         @id @default(cuid())
+    ownerId         String
+    name            String
+    description     String?
+    addressLine     String
+    city            String
+    state           String
+    pincode         String
+    phone           String?
+    email           String?
+    geoLat          Float?
+    geoLng          Float?
+    venueType       VenueType      @default(INDOOR)
+    status          FacilityStatus @default(PENDING)
+    rejectionReason String?
+    ratingAvg       Float?
+    ratingCount     Int            @default(0)
+    createdAt       DateTime       @default(now())
+    updatedAt       DateTime       @updatedAt
+    isActive        Boolean        @default(true)
+
+    // Relations
+    owner     User              @relation("FacilityOwner", fields: [ownerId], references: [id])
+    photos    FacilityPhoto[]
+    amenities FacilityAmenity[]
+    courts    Court[]
+    reviews   Review[]
+
+    @@index([ownerId])
+    @@index([status])
+    @@index([city, state])
+    @@map("facilities")
+}
+
+model FacilityPhoto {
+    id         String  @id @default(cuid())
+    facilityId String
+    url        String
+    caption    String?
+    sortOrder  Int     @default(0)
+
+    facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+    @@index([facilityId, sortOrder])
+    @@map("facility_photos")
+}
+
+model FacilityAmenity {
+    id          String @id @default(cuid())
+    facilityId  String
+    amenityName String
+
+    facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+    @@index([facilityId])
+    @@map("facility_amenities")
+}
+
+model Sport {
+    id   String  @id @default(cuid())
+    name String  @unique
+    icon String?
+
+    courts Court[]
+
+    @@map("sports")
+}
+
+model Court {
+    id           String  @id @default(cuid())
+    facilityId   String
+    name         String
+    sportId      String
+    pricePerHour Decimal @db.Decimal(10, 2)
+    opensAt      String // Store as time string (e.g., "09:00")
+    closesAt     String // Store as time string (e.g., "22:00")
+    isActive     Boolean @default(true)
+
+    // Relations
+    facility         Facility              @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+    sport            Sport                 @relation(fields: [sportId], references: [id])
+    bookings         Booking[]
+    unavailabilities CourtUnavailability[]
+
+    @@index([facilityId])
+    @@index([sportId])
+    @@index([facilityId, sportId])
+    @@map("courts")
+}
+
+model CourtUnavailability {
+    id       String               @id @default(cuid())
+    courtId  String
+    startsAt DateTime
+    endsAt   DateTime
+    reason   UnavailabilityReason @default(MAINTENANCE)
+
+    court Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+    @@index([courtId, startsAt])
+    @@map("court_unavailabilities")
+}
+
+model Booking {
+    id            String        @id @default(cuid())
+    userId        String
+    courtId       String
+    startsAt      DateTime
+    endsAt        DateTime
+    hours         Float
+    unitPrice     Decimal       @db.Decimal(10, 2)
+    totalAmount   Decimal       @db.Decimal(10, 2)
+    status        BookingStatus @default(PENDING)
+    paymentStatus PaymentStatus @default(UNPAID)
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+
+    // Relations
+    user    User     @relation(fields: [userId], references: [id])
+    court   Court    @relation(fields: [courtId], references: [id])
+    payment Payment?
+
+    @@index([userId])
+    @@index([courtId])
+    @@index([courtId, startsAt])
+    @@index([status])
+    @@map("bookings")
+}
+
+model Payment {
+    id                String                @id @default(cuid())
+    bookingId         String                @unique
+    provider          PaymentProvider       @default(RAZORPAY)
+    providerOrderId   String?
+    providerPaymentId String?
+    amount            Decimal               @db.Decimal(10, 2)
+    currency          String                @default("INR")
+    status            PaymentProviderStatus @default(CREATED)
+    createdAt         DateTime              @default(now())
+    updatedAt         DateTime              @updatedAt
+
+    booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+    @@index([status])
+    @@index([provider, providerOrderId])
+    @@map("payments")
+}
+
+model Review {
+    id         String   @id @default(cuid())
+    facilityId String
+    userId     String
+    rating     Int // 1-5 rating
+    comment    String?
+    createdAt  DateTime @default(now())
+
+    facility Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+    user     User     @relation(fields: [userId], references: [id])
+
+    @@unique([facilityId, userId]) // One review per user per facility
+    @@index([facilityId])
+    @@map("reviews")
+}
+
+model OwnerPayout {
+    id          String       @id @default(cuid())
+    ownerId     String
+    amount      Decimal      @db.Decimal(10, 2)
+    periodStart DateTime
+    periodEnd   DateTime
+    status      PayoutStatus @default(PENDING)
+    createdAt   DateTime     @default(now())
+
+    owner User @relation(fields: [ownerId], references: [id])
+
+    @@index([ownerId])
+    @@index([status])
+    @@map("owner_payouts")
+}
+
+model AuditLog {
+    id          String   @id @default(cuid())
+    actorUserId String
+    action      String
+    entityType  String
+    entityId    String
+    metadata    Json?
+    createdAt   DateTime @default(now())
+
+    actor User @relation(fields: [actorUserId], references: [id])
+
+    @@index([actorUserId])
+    @@index([entityType, entityId])
+    @@index([createdAt])
+    @@map("audit_logs")
+}
+
+// Enums
+enum UserRole {
+    USER
+    ADMIN
+    FACILITY_OWNER
+}
+
+enum VenueType {
+    INDOOR
+    OUTDOOR
+    MIXED
+}
+
+enum FacilityStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum UnavailabilityReason {
+    MAINTENANCE
+    BLOCKED
+    OTHER
+}
+
+enum BookingStatus {
+    PENDING
+    CONFIRMED
+    CANCELLED
+    COMPLETED
+    EXPIRED
+}
+
+enum PaymentStatus {
+    UNPAID
+    PAID
+    REFUNDED
+    PARTIAL
+}
+
+enum PaymentProvider {
+    RAZORPAY
+    STRIPE
+    MOCK
+}
+
+enum PaymentProviderStatus {
+    CREATED
+    AUTHORIZED
+    CAPTURED
+    FAILED
+    REFUNDED
+}
+
+enum PayoutStatus {
+    PENDING
+    PAID
+    FAILED
+}
+
+enum OTPChannel {
+    EMAIL
+    SMS
+    WHATSAPP
+}

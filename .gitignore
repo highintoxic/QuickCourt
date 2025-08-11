@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -21,3 +22,41 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+=======
+# Node
+node_modules/
+
+# Build output
+dist/
+coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# Misc
+.tmp/
+.cache/
+>>>>>>> 4826ac8b98693e26dd60ebe8d2c3a0e6dba12c61
