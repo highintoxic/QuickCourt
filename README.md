@@ -41,7 +41,7 @@ QuickCourt is an Odoo-based platform that:
 
 ## 🚀 How to Run the Project
 1. Clone this repository:
-2. git clone
+2. git clone https://github.com/highintoxic/odoo-final-hackathon.git
 ## install dependencies 
 
 cd backend
