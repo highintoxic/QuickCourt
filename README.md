@@ -9,7 +9,7 @@
 ---
 
 🎥 Demo Video
-Click here to watch the demo video
+▶ Click here to watch the demo video
 
 ## 📌 Problem Statement
 **QuickCourt – A Local Sports Booking**  
@@ -43,14 +43,15 @@ QuickCourt is an Odoo-based platform that:
 1. Clone this repository:
 2. git clone
 ## install dependencies 
-3. cd backend
+
+cd backend
 npm install
 cd ../frontend
 npm install
-
+## Start the backend server
 cd backend
 npm start
-
+## Start the frontend server
 cd frontend
 npm start
 
