@@ -1,40 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { bookingService } from "../services";
 
-function UserDashboard({ user, onUpdateUser, onBackToHome, onVenuesClick }) {
+function UserDashboard({ onBackToHome, onVenuesClick }) {
+	const { user: authUser, updateUser } = useAuth();
 	const [activeSection, setActiveSection] = useState("bookings");
 	const [isEditing, setIsEditing] = useState(false);
+	const [bookings, setBookings] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
 	const [formData, setFormData] = useState({
-		fullName: user.name,
-		email: user.email,
+		fullName: authUser?.fullName || authUser?.name || "",
+		email: authUser?.email || "",
 		oldPassword: "",
 		newPassword: "",
 	});
 
-	// Sample booking data
-	const bookings = [
-		{
-			id: 1,
-			venue: "Skyline Badminton Court (Badminton)",
-			date: "18 June 2024",
-			time: "9:00 PM - 6:00 PM",
-			location: "Rajkot, Gujarat",
-			status: "Confirmed",
-			type: "Court Booking",
-			review: "Write Review",
-		},
-		{
-			id: 2,
-			venue: "Skyline Badminton Court (Badminton)",
-			date: "18 June 2024",
-			time: "9:00 PM - 6:00 PM",
-			location: "Rajkot, Gujarat",
-			status: "Confirmed",
-			type: "Court Booking",
-			review: "Write Review",
-		},
-	];
+	// Load user bookings when component mounts or active section changes
+	useEffect(() => {
+		if (activeSection === "bookings") {
+			loadBookings();
+		}
+	}, [activeSection]);
+
+	// Update formData when authUser changes
+	useEffect(() => {
+		if (authUser) {
+			setFormData(prev => ({
+				...prev,
+				fullName: authUser?.fullName || authUser?.name || "",
+				email: authUser?.email || "",
+			}));
+		}
+	}, [authUser]);
+
+	const loadBookings = async () => {
+		setLoading(true);
+		setError(null);
+		try {
+			const result = await bookingService.getUserBookings({
+				sortBy: 'createdAt',
+				sortOrder: 'desc'
+			});
+
+			if (result.success) {
+				setBookings(result.data);
+			} else {
+				setError(result.message || 'Failed to load bookings');
+			}
+		} catch (err) {
+			console.error('Error loading bookings:', err);
+			setError('Failed to load bookings. Please try again.');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const formatBookingDate = (dateString) => {
+		const date = new Date(dateString);
+		return date.toLocaleDateString('en-IN', { 
+			day: 'numeric',
+			month: 'long',
+			year: 'numeric'
+		});
+	};
+
+	const formatBookingTime = (startsAt, endsAt) => {
+		const start = new Date(startsAt);
+		const end = new Date(endsAt);
+		return `${start.toLocaleTimeString('en-IN', { 
+			hour: 'numeric',
+			minute: '2-digit',
+			hour12: true
+		})} - ${end.toLocaleTimeString('en-IN', { 
+			hour: 'numeric',
+			minute: '2-digit',
+			hour12: true
+		})}`;
+	};
+
+	const getStatusColor = (status) => {
+		switch (status) {
+			case 'CONFIRMED':
+				return 'bg-green-100 text-green-800';
+			case 'PENDING':
+				return 'bg-yellow-100 text-yellow-800';
+			case 'CANCELLED':
+				return 'bg-red-100 text-red-800';
+			case 'COMPLETED':
+				return 'bg-blue-100 text-blue-800';
+			default:
+				return 'bg-gray-100 text-gray-800';
+		}
+	};
 
 	const handleInputChange = (e) => {
 		setFormData({
@@ -44,11 +104,11 @@ function UserDashboard({ user, onUpdateUser, onBackToHome, onVenuesClick }) {
 	};
 
 	const handleSaveProfile = () => {
-		onUpdateUser({
-			...user,
-			name: formData.fullName,
-			email: formData.email,
-		});
+		// onUpdateUser({
+		// 	...user,
+		// 	name: formData.fullName,
+		// 	email: formData.email,
+		// });
 		setIsEditing(false);
 		// Reset password fields
 		setFormData({
@@ -139,7 +199,25 @@ function UserDashboard({ user, onUpdateUser, onBackToHome, onVenuesClick }) {
 
 								{/* Bookings List */}
 								<div className='p-6'>
-									{bookings.length > 0 ? (
+									{loading && (
+										<div className="flex justify-center items-center py-12">
+											<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+										</div>
+									)}
+
+									{error && (
+										<div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+											<p className="text-red-600">{error}</p>
+											<button 
+												onClick={loadBookings}
+												className="mt-2 text-red-700 underline hover:no-underline"
+											>
+												Try Again
+											</button>
+										</div>
+									)}
+
+									{!loading && !error && bookings.length > 0 ? (
 										<div className='space-y-4'>
 											{bookings.map((booking) => (
 												<div key={booking.id} className='border rounded-lg p-4'>
@@ -150,32 +228,51 @@ function UserDashboard({ user, onUpdateUser, onBackToHome, onVenuesClick }) {
 																	📅
 																</span>
 																<span className='text-sm font-medium'>
-																	{booking.venue}
+																	{booking.court?.facility?.name} ({booking.court?.sport?.name})
 																</span>
 															</div>
 															<div className='text-sm text-gray-600 space-y-1'>
 																<p>
-																	📅 {booking.date} ⏰ {booking.time}
+																	📅 {formatBookingDate(booking.startsAt)} ⏰ {formatBookingTime(booking.startsAt, booking.endsAt)}
 																</p>
-																<p>📍 {booking.location}</p>
+																<p>📍 {booking.court?.facility?.city}, {booking.court?.facility?.state}</p>
+																<p>🏟️ Court: {booking.court?.name}</p>
+																<p>💰 Amount: ₹{booking.totalAmount}</p>
 																<div className='flex items-center gap-2'>
 																	<span>Status:</span>
-																	<span className='bg-green-100 text-green-800 px-2 py-1 rounded text-xs'>
-																		✓ {booking.status}
+																	<span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(booking.status)}`}>
+																		{booking.status}
+																	</span>
+																</div>
+																<div className='flex items-center gap-2'>
+																	<span>Payment:</span>
+																	<span className={`px-2 py-1 rounded text-xs font-medium ${
+																		booking.paymentStatus === 'PAID' ? 'bg-green-100 text-green-800' :
+																		booking.paymentStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+																		'bg-red-100 text-red-800'
+																	}`}>
+																		{booking.paymentStatus}
 																	</span>
 																</div>
 															</div>
 														</div>
 														<div className='text-right'>
-															<button className='text-blue-600 text-sm hover:underline'>
-																[{booking.type}] [{booking.review}]
-															</button>
+															{booking.status === 'CONFIRMED' && new Date(booking.startsAt) > new Date() && (
+																<button className='text-red-600 text-sm hover:underline mb-2 block'>
+																	Cancel Booking
+																</button>
+															)}
+															{booking.status === 'COMPLETED' && (
+																<button className='text-blue-600 text-sm hover:underline'>
+																	Write Review
+																</button>
+															)}
 														</div>
 													</div>
 												</div>
 											))}
 										</div>
-									) : (
+									) : !loading && !error && (
 										<div className='text-center py-12'>
 											<div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4'>
 												<svg
@@ -192,9 +289,18 @@ function UserDashboard({ user, onUpdateUser, onBackToHome, onVenuesClick }) {
 													/>
 												</svg>
 											</div>
-											<p className='text-gray-500'>
-												No recent booking history for past dates
+											<p className='text-gray-500 mb-2'>
+												No bookings found
 											</p>
+											<p className='text-gray-400 mb-4'>
+												Start by booking your first venue!
+											</p>
+											<button
+												onClick={onVenuesClick}
+												className='bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-lg transition-colors'
+											>
+												Browse Venues
+											</button>
 										</div>
 									)}
 								</div>

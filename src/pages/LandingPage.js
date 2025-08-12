@@ -1,55 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { facilityService } from "../services";
 
 function LandingPage({ onGetStarted, onVenuesClick }) {
 	const [selectedVenue, setSelectedVenue] = useState(null);
+	const [featuredVenues, setFeaturedVenues] = useState([]);
+	const [loading, setLoading] = useState(true);
 
-	// Sample venue data
-	const venues = [
-		{
-			id: 1,
-			name: "Premium Court A",
-			image: "/placeholder.svg?height=200&width=300",
-			location: "Downtown Sports Complex",
-			price: "$50/hour",
-		},
-		{
-			id: 2,
-			name: "Outdoor Court B",
-			image: "/placeholder.svg?height=200&width=300",
-			location: "City Park Recreation",
-			price: "$35/hour",
-		},
-		{
-			id: 3,
-			name: "Indoor Arena C",
-			image: "/placeholder.svg?height=200&width=300",
-			location: "Metro Sports Center",
-			price: "$75/hour",
-		},
-		{
-			id: 4,
-			name: "Community Court D",
-			image: "/placeholder.svg?height=200&width=300",
-			location: "Neighborhood Club",
-			price: "$25/hour",
-		},
-		{
-			id: 5,
-			name: "Professional Court E",
-			image: "/placeholder.svg?height=200&width=300",
-			location: "Elite Sports Academy",
-			price: "$100/hour",
-		},
-		{
-			id: 6,
-			name: "Multi-Sport Court F",
-			image: "/placeholder.svg?height=200&width=300",
-			location: "University Campus",
-			price: "$60/hour",
-		},
-	];
+	// Load featured venues on component mount
+	useEffect(() => {
+		const loadFeaturedVenues = async () => {
+			try {
+				const result = await facilityService.getAllFacilities({
+					limit: 6,
+					sortBy: "ratingAvg",
+					sortOrder: "desc",
+					status: "APPROVED",
+				});
+
+				if (result.success) {
+					setFeaturedVenues(result.data);
+				}
+			} catch (error) {
+				console.error("Error loading featured venues:", error);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		loadFeaturedVenues();
+	}, []);
+
+	// Helper functions
+	const getPrimaryImage = (facility) => {
+		if (facility.photos && facility.photos.length > 0) {
+			return facility.photos.sort((a, b) => a.sortOrder - b.sortOrder)[0].url;
+		}
+		return "/placeholder.svg?height=200&width=300";
+	};
+
+	const getVenueLocation = (facility) => {
+		return `${facility.city}, ${facility.state}`;
+	};
+
+	const getCheapestPrice = (facility) => {
+		if (!facility.courts || facility.courts.length === 0)
+			return "Contact for price";
+		const cheapest = Math.min(
+			...facility.courts.map((court) => parseFloat(court.pricePerHour))
+		);
+		return `₹${cheapest}/hour`;
+	};
 
 	const handleBookNow = () => {
 		onGetStarted(); // This will take them to signup/login
@@ -63,41 +65,8 @@ function LandingPage({ onGetStarted, onVenuesClick }) {
 
 	return (
 		<div className='min-h-screen bg-gray-50'>
-			{/* Navigation Header */}
-			<nav className='bg-white shadow-sm border-b'>
-				<div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-					<div className='flex justify-between items-center h-16'>
-						<div className='flex items-center gap-2'>
-							<div className='w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center'>
-								<div className='w-4 h-4 bg-white rounded-full'></div>
-							</div>
-							<span className='text-xl font-semibold text-gray-800'>
-								QuickCourt
-							</span>
-						</div>
-						<div className='hidden md:flex space-x-8'>
-							<a href='#' className='text-teal-600 font-medium'>
-								Home
-							</a>
-							<button
-								onClick={onVenuesClick}
-								className='text-gray-700 hover:text-teal-600 font-medium'
-							>
-								Venues
-							</button>
-							<button
-								onClick={onGetStarted}
-								className='bg-teal-600 hover:bg-teal-700 text-white font-medium px-4 py-2 rounded-lg transition-colors'
-							>
-								Sign In
-							</button>
-						</div>
-					</div>
-				</div>
-			</nav>
-
-			{/* Hero Section */}
-			<section className='bg-white py-20'>
+			{/* Hero Section (add top padding for sticky navbar) */}
+			<section className='bg-white pt-28 pb-20'>
 				<div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center'>
 					<h1 className='text-4xl md:text-6xl font-bold text-green-600 mb-4'>
 						Step Up to the Game
@@ -135,43 +104,83 @@ function LandingPage({ onGetStarted, onVenuesClick }) {
 						Book The Venue
 					</h2>
 
-					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-						{venues.map((venue) => (
-							<div
-								key={venue.id}
-								className='bg-white/90 backdrop-blur-sm rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105'
-								onClick={() => handleVenueSelect(venue)}
-							>
-								<div className='h-48 bg-gray-200 overflow-hidden'>
-									<img
-										src={venue.image || "/placeholder.svg"}
-										alt={venue.name}
-										className='w-full h-full object-cover'
-									/>
-								</div>
-								<div className='p-4'>
-									<h3 className='text-lg font-semibold text-gray-800 mb-2'>
-										{venue.name}
-									</h3>
-									<p className='text-sm text-gray-600 mb-2'>{venue.location}</p>
-									<div className='flex justify-between items-center'>
-										<span className='text-lg font-bold text-green-600'>
-											{venue.price}
-										</span>
+					{loading && (
+						<div className='flex justify-center items-center py-12'>
+							<div className='animate-spin rounded-full h-12 w-12 border-b-2 border-white'></div>
+						</div>
+					)}
+
+					{!loading && featuredVenues.length > 0 && (
+						<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+							{featuredVenues.map((facility) => (
+								<div
+									key={facility.id}
+									className='bg-white/90 backdrop-blur-sm rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105'
+									onClick={() => handleVenueSelect(facility)}
+								>
+									<div className='h-48 bg-gray-200 overflow-hidden'>
+										<img
+											src={getPrimaryImage(facility)}
+											alt={facility.name}
+											className='w-full h-full object-cover'
+										/>
+									</div>
+									<div className='p-4'>
+										<h3 className='text-lg font-semibold text-gray-800 mb-2'>
+											{facility.name}
+										</h3>
+										<p className='text-sm text-gray-600 mb-2'>
+											{getVenueLocation(facility)}
+										</p>
+										<div className='flex justify-between items-center'>
+											<span className='text-lg font-bold text-green-600'>
+												{getCheapestPrice(facility)}
+											</span>
+											<div className='flex items-center'>
+												{facility.ratingAvg && (
+													<>
+														<svg
+															className='w-4 h-4 text-yellow-400 mr-1'
+															fill='currentColor'
+															viewBox='0 0 20 20'
+														>
+															<path d='M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z' />
+														</svg>
+														<span className='text-sm text-gray-600'>
+															{facility.ratingAvg.toFixed(1)}
+														</span>
+													</>
+												)}
+											</div>
+										</div>
 										<button
 											onClick={(e) => {
 												e.stopPropagation();
-												handleVenueSelect(venue);
+												handleVenueSelect(facility);
 											}}
-											className='bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm transition-colors duration-200'
+											className='mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm transition-colors duration-200'
 										>
 											Book Now
 										</button>
 									</div>
 								</div>
-							</div>
-						))}
-					</div>
+							))}
+						</div>
+					)}
+
+					{!loading && featuredVenues.length === 0 && (
+						<div className='text-center py-12'>
+							<p className='text-white/80 text-lg'>
+								No venues available at the moment.
+							</p>
+							<button
+								onClick={onVenuesClick}
+								className='mt-4 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200'
+							>
+								Explore All Venues →
+							</button>
+						</div>
+					)}
 
 					<div className='text-center mt-8'>
 						<button

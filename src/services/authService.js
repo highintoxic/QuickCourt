@@ -97,7 +97,7 @@ class AuthService {
   // Send OTP for email verification
   async sendEmailOTP(email) {
     try {
-      const response = await api.post('/auth/send-email-otp', { email });
+      const response = await api.post('/auth/otp/request', { email, channel:"EMAIL" });
       return {
         success: true,
         data: response.data.data,
@@ -113,9 +113,9 @@ class AuthService {
   }
 
   // Verify email OTP
-  async verifyEmailOTP(email, otp) {
+  async verifyEmailOTP(email, code) {
     try {
-      const response = await api.post('/auth/verify-email-otp', { email, otp });
+      const response = await api.post('/auth/otp/verify', { email, code });
       return {
         success: true,
         data: response.data.data,

@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 
-function BookingForm({ venue, onContinueToPayment, onBackToVenue }) {
+function BookingForm({
+	venue,
+	selectedTimeSlot,
+	onContinueToPayment,
+	onBackToVenue,
+}) {
 	const [bookingData, setBookingData] = useState({
-		date: "",
-		time: "",
+		date: selectedTimeSlot?.date || "",
+		time: selectedTimeSlot?.time || "",
 		duration: 1,
 		court: "Court 1",
 		playerName: "",
@@ -107,6 +112,11 @@ function BookingForm({ venue, onContinueToPayment, onBackToVenue }) {
 								<div>
 									<label className='block text-sm font-medium text-gray-700 mb-2'>
 										Time
+										{selectedTimeSlot && (
+											<span className='ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded'>
+												Pre-selected: {selectedTimeSlot.time}
+											</span>
+										)}
 									</label>
 									<select
 										name='time'
