@@ -8,6 +8,9 @@
 
 ---
 
+🎥 Demo Video
+Click here to watch the demo video
+
 ## 📌 Problem Statement
 **QuickCourt – A Local Sports Booking**  
 Finding and booking nearby sports facilities can often be time-consuming, fragmented, and inefficient.  
@@ -36,7 +39,22 @@ QuickCourt is an Odoo-based platform that:
 - **Database:** PostgreSQL
 - **Other Tools & Libraries:** Axios, JWT Authentication, CSS/SCSS
 
----
+## 🚀 How to Run the Project
+1. Clone this repository:
+2. git clone
+## install dependencies 
+3. cd backend
+npm install
+cd ../frontend
+npm install
+
+cd backend
+npm start
+
+cd frontend
+npm start
+
+
 
 
 
