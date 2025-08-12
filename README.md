@@ -9,7 +9,7 @@
 ---
 
 🎥 Demo Video
-▶ Click here to watch the demo video
+[▶ Click here to watch the demo video](https://drive.google.com/drive/folders/1c2uu_8InvUsyOfjFDs1NGtqc1X2qxX4U?usp=sharing)
 
 ## 📌 Problem Statement
 **QuickCourt – A Local Sports Booking**  
